@@ -36,8 +36,8 @@
                 </div>
                 <div class="row">
                     <div class="input-field col s12">
-                        <input type="date" id="date" name="date" required>
-                        <label for="date">Date</label>
+                        <input type="date" id="date" name="date" class="no-materialize-datepicker" required>
+                        <label for="date" class="active">Date</label>
                     </div>
                 </div>
                 <div class="row">
@@ -95,13 +95,28 @@
     let selectedEventId = null;
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize datepicker
-        var dateElems = document.querySelectorAll('input[type="date"]');
-        var dateInstances = M.Datepicker.init(dateElems, {});
+        // Prevent Materialize from initializing datepicker on our date field
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .no-materialize-datepicker + .datepicker-modal,
+            .no-materialize-datepicker ~ .datepicker-container {
+                display: none !important;
+            }
+        `;
+        document.head.appendChild(style);
         
         // Initialize modal
         var modalElems = document.querySelectorAll('.modal');
         var modalInstances = M.Modal.init(modalElems, {});
+        
+        // Destroy Materialize datepicker instance if it exists for our input
+        const noMPInput = document.querySelector('.no-materialize-datepicker');
+        if (noMPInput && M.Datepicker) {
+            const dpInstance = M.Datepicker.getInstance(noMPInput);
+            if (dpInstance) {
+                dpInstance.destroy();
+            }
+        }
 
         // Fetch events
         fetch('/events')
@@ -160,9 +175,12 @@
         document.getElementById('create-event-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            const dateInput = document.getElementById('date');
+            const formattedDate = dateInput.value; // Browser date input already returns YYYY-MM-DD format
+            
             const eventData = {
                 name: document.getElementById('name').value,
-                date: document.getElementById('date').value,
+                date: formattedDate,
                 place: document.getElementById('place').value,
                 owner_id: parseInt(document.getElementById('owner_id').value, 10) // Convert to integer
             };
