@@ -22,12 +22,35 @@
         </div>
     </div>
 </section>
+
+<!-- User Selection Modal -->
+<div id="user-select-modal" class="modal">
+    <div class="modal-content">
+        <h4>Select a User</h4>
+        <div class="input-field">
+            <select id="user-dropdown" class="browser-default">
+                <option value="" disabled selected>Choose a user</option>
+                <!-- Users will be populated dynamically -->
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-light btn-flat">Cancel</a>
+        <a href="#!" id="confirm-registration" class="waves-effect waves-light btn">Register</a>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 <script type="text/javascript">
+    let selectedEventId = null;
+
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize modal
+        var modalElems = document.querySelectorAll('.modal');
+        var modalInstances = M.Modal.init(modalElems, {});
+
         // Fetch events from API
         fetch('/events')
             .then(response => response.json())
@@ -48,7 +71,7 @@
                             <p>Place: ${event.place}</p>
                         </div>
                         <div class="card-action">
-                           <button class="btn" onclick="registerForEvent(${event.id})">Register</button>
+                           <button class="btn" onclick="openRegistrationModal(${event.id})">Register</button>
                         </div>
                     `;
                     container.appendChild(eventCard);
@@ -59,13 +82,49 @@
                 document.getElementById('event-container').innerHTML = 
                     '<p>Error loading events. Please try again later.</p>';
             });
+
+        // Set up registration confirmation button
+        document.getElementById('confirm-registration').addEventListener('click', function() {
+            const userId = document.getElementById('user-dropdown').value;
+            if (!userId) {
+                alert('Please select a user');
+                return;
+            }
+
+            registerUserForEvent(selectedEventId, userId);
+            // Close the modal
+            M.Modal.getInstance(document.getElementById('user-select-modal')).close();
+        });
     });
 
-    function registerForEvent(eventId) {
-        // Get current user ID (you would normally store this in session/local storage after login)
-        const userId = prompt("Enter your user ID to register:"); // This is just for demo
-        if (!userId) return;
-        
+    function openRegistrationModal(eventId) {
+        selectedEventId = eventId;
+
+        // Clear previous options
+        const dropdown = document.getElementById('user-dropdown');
+        dropdown.innerHTML = '<option value="" disabled selected>Choose a user</option>';
+
+        // Fetch users for the dropdown
+        fetch('/users')
+            .then(response => response.json())
+            .then(users => {
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.username} (ID: ${user.id})`;
+                    dropdown.appendChild(option);
+                });
+
+                // Open the modal
+                M.Modal.getInstance(document.getElementById('user-select-modal')).open();
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                alert('Error loading users. Please try again.');
+            });
+    }
+
+    function registerUserForEvent(eventId, userId) {
         fetch(`/events/${eventId}/register`, {
             method: 'POST',
             headers: {
