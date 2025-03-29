@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Events - Event Management{% endblock %}
+{% block styles %}
+    {{ super() }}
+    <style>
+        .input-field label {
+            color: #9e9e9e !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="center">All Events</h1>
+    <div id="events-list">
+        <!-- Events will be loaded dynamically -->
+    </div>
+    
+    <div class="create-event section">
+        <h2 class="center">Create New Event</h2>
+        <div class="row">
+            <form id="create-event-form" class="col s12">
+                <div class="row">
+                    <div class="input-field col s12">
+                        <input type="text" id="name" name="name" required>
+                        <label for="name">Event Name</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <input type="date" id="date" name="date" required>
+                        <label for="date">Date</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <input type="text" id="place" name="place" required>
+                        <label for="place">Location</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <input type="number" id="owner_id" name="owner_id" required>
+                        <label for="owner_id">Your User ID</label>
+                    </div>
+                </div>
+                <button class="btn waves-effect waves-light" type="submit">Create Event</button>
+            </form>
+            <div id="event-message" class="col s12"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize datepicker
+        var dateElems = document.querySelectorAll('input[type="date"]');
+        var dateInstances = M.Datepicker.init(dateElems, {});
+
+        // Fetch events
+        fetch('/events')
+            .then(response => response.json())
+            .then(events => {
+                const eventsList = document.getElementById('events-list');
+                if (events.length === 0) {
+                    eventsList.innerHTML = '<p>No events available</p>';
+                    return;
+                }
+                
+                const table = document.createElement('table');
+                table.classList.add('striped', 'responsive-table');
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Location</th>
+                            <th>Owner</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                `;
+                
+                const tbody = table.querySelector('tbody');
+                
+                events.forEach(event => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.name}</td>
+                        <td>${event.date}</td>
+                        <td>${event.place}</td>
+                        <td>${event.owner_id}</td>
+                        <td><button class="btn waves-effect waves-light" onclick="registerForEvent(${event.id})">Register</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                eventsList.appendChild(table);
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                document.getElementById('events-list').innerHTML = 
+                    '<p>Error loading events. Please try again later.</p>';
+            });
+            
+        // Handle form submission
+        document.getElementById('create-event-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const eventData = {
+                name: document.getElementById('name').value,
+                date: document.getElementById('date').value,
+                place: document.getElementById('place').value,
+                owner_id: document.getElementById('owner_id').value
+            };
+            
+            fetch('/events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(eventData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('event-message').innerHTML = 
+                    '<p class="green-text">Event created successfully!</p>';
+                document.getElementById('create-event-form').reset();
+                // Reload page to show new event
+                setTimeout(() => location.reload(), 1500);
+            })
+            .catch(error => {
+                console.error('Error creating event:', error);
+                document.getElementById('event-message').innerHTML = 
+                    '<p class="red-text">Failed to create event. Please try again.</p>';
+            });
+        });
+    });
+    
+    function registerForEvent(eventId) {
+        const userId = prompt("Enter your user ID to register:"); 
+        if (!userId) return;
+        
+        fetch(`/events/${eventId}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || "Successfully registered!");
+        })
+        .catch(error => {
+            console.error('Error registering for event:', error);
+            alert("Failed to register for the event. Please try again.");
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Event Management{% endblock %}
+{% block styles %}
+    {{ super() }}
+    <style>
+        .input-field label {
+            color: #26a69a; /* Teal color */
+        }
+        .input-field input[type=text]:focus + label {
+            color: #009688; /* Darker teal color on focus */
+        }
+        .input-field input[type=text]:focus {
+            border-bottom: 1px solid #009688; /* Darker teal border on focus */
+            box-shadow: 0 1px 0 0 #009688; /* Darker teal shadow on focus */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col s12 m6 offset-m3">
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">Sign Up</span>
+                    <form id="signup-form">
+                        <div class="input-field">
+                            <input id="username" type="text" name="username" class="validate" required>
+                            <label for="username">Username</label>
+                        </div>
+                        <button class="btn waves-effect waves-light teal" type="submit">Sign Up
+                            <i class="material-icons right">send</i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        <div id="message"></div>
+
+    </div>
+    </form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+<script>
+    document.getElementById('signup-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        
+        fetch('/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username: username })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('message').innerHTML = 
+                `<p class="green-text text-darken-2">User created successfully! Your ID is: ${data.user_id}</p>`;
+            document.getElementById('signup-form').reset();
+        })
+        .catch(error => {
+            console.error('Error creating user:', error);
+            document.getElementById('message').innerHTML = 
+                '<p class="red-text text-darken-2">Failed to create user. Please try again.</p>';
+        });
+    });
+</script>
+{% endblock %}

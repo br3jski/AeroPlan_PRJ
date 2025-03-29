@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Event Management{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+{% endblock %}
+
+{% block content %}
+<section id="hero">
+    <div class="container">
+        <h2 class="center-align">Welcome to Our Event Platform</h2>
+        <p class="center-align">Find and register for amazing events happening near you.</p>
+    </div>
+</section>
+
+<section id="events">
+    <div class="container">
+        <h2 class="center-align">Upcoming Events</h2>
+        <div id="event-container" class="row">
+            <!-- Events will be loaded dynamically -->
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch events from API
+        fetch('/events')
+            .then(response => response.json())
+            .then(events => {
+                const container = document.getElementById('event-container');
+                if (events.length === 0) {
+                    container.innerHTML = '<p>No events available at this time.</p>';
+                    return;
+                }
+                
+                events.forEach(event => {
+                   const eventCard = document.createElement('div');
+                    eventCard.className = 'col s12 m6 l4';
+                    eventCard.innerHTML = `<div class="card">
+                        <div class="card-content">
+                            <span class="card-title">${event.name}</span>
+                            <p>Date: ${event.date}</p>
+                            <p>Place: ${event.place}</p>
+                        </div>
+                        <div class="card-action">
+                           <button class="btn" onclick="registerForEvent(${event.id})">Register</button>
+                        </div>
+                    `;
+                    container.appendChild(eventCard);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                document.getElementById('event-container').innerHTML = 
+                    '<p>Error loading events. Please try again later.</p>';
+            });
+    });
+
+    function registerForEvent(eventId) {
+        // Get current user ID (you would normally store this in session/local storage after login)
+        const userId = prompt("Enter your user ID to register:"); // This is just for demo
+        if (!userId) return;
+        
+        fetch(`/events/${eventId}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || "Successfully registered!");
+        })
+        .catch(error => {
+            console.error('Error registering for event:', error);
+            alert("Failed to register for the event. Please try again.");
+        });
+    }
+   
+    </script>
+{% endblock %}
