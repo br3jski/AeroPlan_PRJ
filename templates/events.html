@@ -7,6 +7,13 @@
         .input-field label {
             color: #9e9e9e !important;
         }
+        .modal {
+            max-width: 500px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
     </style>
 {% endblock %}
 
@@ -51,14 +58,50 @@
         </div>
     </div>
 </div>
+
+<!-- User Selection Modal -->
+<div id="user-select-modal" class="modal">
+    <div class="modal-content">
+        <h4>Select a User</h4>
+        <div class="input-field">
+            <select id="user-dropdown" class="browser-default">
+                <option value="" disabled selected>Choose a user</option>
+                <!-- Users will be populated dynamically -->
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-light btn-flat">Cancel</a>
+        <a href="#!" id="confirm-registration" class="waves-effect waves-light btn">Register</a>
+    </div>
+</div>
+
+<!-- Participants Modal -->
+<div id="participants-modal" class="modal">
+    <div class="modal-content">
+        <h4>Event Participants</h4>
+        <div id="participants-list">
+            <p>Loading participants...</p>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-light btn">Close</a>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    let selectedEventId = null;
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize datepicker
         var dateElems = document.querySelectorAll('input[type="date"]');
         var dateInstances = M.Datepicker.init(dateElems, {});
+        
+        // Initialize modal
+        var modalElems = document.querySelectorAll('.modal');
+        var modalInstances = M.Modal.init(modalElems, {});
 
         // Fetch events
         fetch('/events')
@@ -97,7 +140,10 @@
                         <td>${event.date}</td>
                         <td>${event.place}</td>
                         <td>${event.owner_id}</td>
-                        <td><button class="btn waves-effect waves-light" onclick="registerForEvent(${event.id})">Register</button></td>
+                        <td class="action-buttons">
+                            <button class="btn waves-effect waves-light" onclick="openRegistrationModal(${event.id})">Register</button>
+                            <button class="btn waves-effect waves-light blue" onclick="viewParticipants(${event.id})">View Participants</button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -111,7 +157,6 @@
             });
             
         // Handle form submission
-
         document.getElementById('create-event-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -153,12 +198,49 @@
                     `<p class="red-text">Failed to create event: ${error.message}</p>`;
             });
         });
+        
+        // Set up registration confirmation button
+        document.getElementById('confirm-registration').addEventListener('click', function() {
+            const userId = document.getElementById('user-dropdown').value;
+            if (!userId) {
+                alert('Please select a user');
+                return;
+            }
+            
+            registerUserForEvent(selectedEventId, userId);
+            // Close the modal
+            M.Modal.getInstance(document.getElementById('user-select-modal')).close();
+        });
     });
     
-    function registerForEvent(eventId) {
-        const userId = prompt("Enter your user ID to register:"); 
-        if (!userId) return;
+    function openRegistrationModal(eventId) {
+        selectedEventId = eventId;
         
+        // Clear previous options
+        const dropdown = document.getElementById('user-dropdown');
+        dropdown.innerHTML = '<option value="" disabled selected>Choose a user</option>';
+        
+        // Fetch users for the dropdown
+        fetch('/users')
+            .then(response => response.json())
+            .then(users => {
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.username} (ID: ${user.id})`;
+                    dropdown.appendChild(option);
+                });
+                
+                // Open the modal
+                M.Modal.getInstance(document.getElementById('user-select-modal')).open();
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                alert('Error loading users. Please try again.');
+            });
+    }
+    
+    function registerUserForEvent(eventId, userId) {
         fetch(`/events/${eventId}/register`, {
             method: 'POST',
             headers: {
@@ -174,6 +256,45 @@
             console.error('Error registering for event:', error);
             alert("Failed to register for the event. Please try again.");
         });
+    }
+    
+    function viewParticipants(eventId) {
+        // Show loading state
+        document.getElementById('participants-list').innerHTML = '<p>Loading participants...</p>';
+        
+        // Open the modal
+        M.Modal.getInstance(document.getElementById('participants-modal')).open();
+        
+        // Fetch participants
+        fetch(`/events/${eventId}/participants`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load participants');
+                }
+                return response.json();
+            })
+            .then(participants => {
+                const participantsList = document.getElementById('participants-list');
+                
+                if (participants.length === 0) {
+                    participantsList.innerHTML = '<p>No participants registered for this event yet.</p>';
+                    return;
+                }
+                
+                // Create a list of participants
+                let html = '<ul class="collection">';
+                participants.forEach(participant => {
+                    html += `<li class="collection-item">${participant.username} (ID: ${participant.id})</li>`;
+                });
+                html += '</ul>';
+                
+                participantsList.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error fetching participants:', error);
+                document.getElementById('participants-list').innerHTML = 
+                    '<p class="red-text">Error loading participants. Please try again.</p>';
+            });
     }
 </script>
 {% endblock %}

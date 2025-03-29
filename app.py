@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from database import create_event, get_all_events, create_user, get_all_users, register_user_for_event
+from database import create_event, get_all_events, create_user, get_all_users, register_user_for_event, User
 import sqlite3
 import os
 
@@ -53,6 +53,62 @@ def get_events():
         return jsonify(serialized_events), 200
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/events/<int:event_id>/participants', methods=['GET'])
+def get_event_participants(event_id):
+    try:
+        print(f"Fetching participants for event ID: {event_id}")
+        participants = get_event_users(event_id)
+        print(f"Found {len(participants)} participants")
+        # Properly serialize user objects
+        serialized_participants = [{"id": user.user_id, "username": user.user_name} for user in participants]
+        return jsonify(serialized_participants), 200
+    except Exception as e:
+        # Catch ANY exception, not just sqlite3.Error
+        error_message = str(e)
+        print(f"Error getting participants: {error_message}")
+        return jsonify({'error': error_message}), 500
+       
+def get_event_users(event_id):
+    """Get all users registered for a specific event."""
+    conn = None
+    try:
+        conn = sqlite3.connect('events.db')
+        cursor = conn.cursor()
+        
+        # First, check if the user_event table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_event'")
+        if not cursor.fetchone():
+            print("user_event table doesn't exist!")
+            return []
+        
+        # Check users table structure
+        cursor.execute("PRAGMA table_info(users)")
+        columns = cursor.fetchall()
+        print(f"Users table columns: {columns}")
+        
+        # Modified query using correct column names from the database
+        cursor.execute('''
+            SELECT u.id, u.username FROM users u
+            JOIN user_event ue ON u.id = ue.user_id
+            WHERE ue.event_id = ?
+        ''', (event_id,))
+        rows = cursor.fetchall()
+        print(f"Query returned {len(rows)} rows")
+        
+        users = []
+        for row in rows:
+            print(f"Processing row: {row}")
+            users.append(User(row[0], row[1]))
+        return users
+    except Exception as e:
+        print(f"Database error in get_event_users: {str(e)}")
+        if conn:
+            conn.close()
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/users', methods=['POST'])
 def create_new_user():
