@@ -111,6 +111,7 @@
             });
             
         // Handle form submission
+
         document.getElementById('create-event-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -118,7 +119,7 @@
                 name: document.getElementById('name').value,
                 date: document.getElementById('date').value,
                 place: document.getElementById('place').value,
-                owner_id: document.getElementById('owner_id').value
+                owner_id: parseInt(document.getElementById('owner_id').value, 10) // Convert to integer
             };
             
             fetch('/events', {
@@ -128,8 +129,18 @@
                 },
                 body: JSON.stringify(eventData)
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                // Check if response is ok before proceeding
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to create event');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Event created:', data);
                 document.getElementById('event-message').innerHTML = 
                     '<p class="green-text">Event created successfully!</p>';
                 document.getElementById('create-event-form').reset();
@@ -139,7 +150,7 @@
             .catch(error => {
                 console.error('Error creating event:', error);
                 document.getElementById('event-message').innerHTML = 
-                    '<p class="red-text">Failed to create event. Please try again.</p>';
+                    `<p class="red-text">Failed to create event: ${error.message}</p>`;
             });
         });
     });

@@ -24,7 +24,15 @@ def create_new_event():
         return jsonify({'error': 'Missing required fields'}), 400
     try:
         event = create_event(name, date, place, owner_id)
-        return jsonify(event), 201
+        # Serialize the event object to a dictionary
+        event_dict = {
+            "id": event.id,
+            "name": event.name,
+            "date": event.date,
+            "place": event.place,
+            "owner_id": event.owner_id
+        }
+        return jsonify(event_dict), 201
     except sqlite3.Error as e:
          return jsonify({'error': str(e)}), 500
 
@@ -32,7 +40,17 @@ def create_new_event():
 def get_events():
     try:
         events = get_all_events()
-        return jsonify(events), 200
+        # Serialize list of event objects to list of dictionaries
+        serialized_events = [
+            {
+                "id": event.id,
+                "name": event.name,
+                "date": event.date,
+                "place": event.place,
+                "owner_id": event.owner_id
+            } for event in events
+        ]
+        return jsonify(serialized_events), 200
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
@@ -44,9 +62,9 @@ def create_new_user():
         return jsonify({'error': 'Missing username'}), 400
     try:
         user = create_user(username)
-        # Serialize the user object to JSON by adding user_id and user_name
+        # Serialize the user object to JSON
         user_data = {"user_id": user.user_id, "username": user.user_name}
-
+        print("Returning user data:", user_data)  # Add this line for debugging
         return jsonify(user_data), 201
     except (sqlite3.Error, AttributeError) as e:
         return jsonify({'error': str(e)}), 500
@@ -55,7 +73,9 @@ def create_new_user():
 def get_users():
     try:
         users = get_all_users()
-        return jsonify(users), 200
+        # Properly serialize user objects
+        serialized_users = [{"id": user.user_id, "username": user.user_name} for user in users]
+        return jsonify(serialized_users), 200
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 

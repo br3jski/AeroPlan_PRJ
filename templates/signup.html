@@ -45,30 +45,34 @@
 
 {% block scripts %}
     {{ super() }}
-<script>
-    document.getElementById('signup-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('username').value;
-        
-        fetch('/users', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username: username })
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('message').innerHTML = 
-                `<p class="green-text text-darken-2">User created successfully! Your ID is: ${data.user_id}</p>`;
-            document.getElementById('signup-form').reset();
-        })
-        .catch(error => {
-            console.error('Error creating user:', error);
-            document.getElementById('message').innerHTML = 
-                '<p class="red-text text-darken-2">Failed to create user. Please try again.</p>';
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            
+            fetch('/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Full response data:', data);
+                document.getElementById('message').innerHTML = 
+                    `<p class="green-text text-darken-2">User created successfully! Your ID is: ${data.user_id}</p>`;
+                document.getElementById('signup-form').reset();
+            })
+            .catch(error => {
+                console.error('Error creating user:', error);
+                document.getElementById('message').innerHTML = 
+                    '<p class="red-text text-darken-2">Failed to create user. Please try again.</p>';
+            });
         });
-    });
-</script>
+    </script>
 {% endblock %}
